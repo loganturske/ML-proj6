@@ -81,32 +81,7 @@ def normalize_dataset(dataset, minmax):
 		for i in range(len(row)-1):
 			# Normalize the data based on the minmax list passed in
 			row[i] = (row[i] - minmax[i][0]) / (minmax[i][1] - minmax[i][0])
- 
 
-#
-# This function will split a dataset into k folds for cross validation
-#
-def cross_validation_split(dataset, n_folds):
-	# Create an empty list that will house the folds
-	dataset_split = list()
-	# Create a copy of the dataset as a list
-	dataset_copy = list(dataset)
-	# Get the number of entries for each fold
-	fold_size = int(len(dataset) / n_folds)
-	# For each fold
-	for i in range(n_folds):
-		# Create an empty list
-		fold = list()
-		# While you still need to populate the fold
-		while len(fold) < fold_size:
-			# Get a random value as an index of the dataset
-			index = randrange(len(dataset_copy))
-			# Add the random row to the fold
-			fold.append(dataset_copy.pop(index))
-		# Add the fold to the dataset that will house the folds
-		dataset_split.append(fold)
-	# Return the dataset list that houses the folds
-	return dataset_split
  
 
 #
@@ -123,44 +98,6 @@ def accuracy_metric(actual, predicted):
 			correct += 1
 	# Calculate the accuracy and return it
 	return correct / float(len(actual)) * 100.0
- 
-
-#
-# This function will evaluate the algorithm using cross validation
-#
-def evaluate_algorithm(dataset, algorithm, n_folds, *args):
-	# Get all of the folds to use for cross validation
-	folds = cross_validation_split(dataset, n_folds)
-	# Create an empty list to house all of the scores
-	scores = list()
-	# For each fold
-	for fold in folds:
-		# Get a reference to the training set by making a list out of the folds
-		train_set = list(folds)
-		# Remove the fold that you are on
-		train_set.remove(fold)
-		# Make the training sets have a list on them
-		train_set = sum(train_set, [])
-		# Create an empty list 
-		test_set = list()
-		# For each row in the fold
-		for row in fold:
-			# Make a list of the row
-			row_copy = list(row)
-			# Add the row to the test set
-			test_set.append(row_copy)
-			# Set the last column to None
-			row_copy[-1] = None
-		# Use the algorithm that was passed in on the training set and the test set
-		predicted = algorithm(train_set, test_set, *args)
-		# Get a list of the actual classes for each row in the fold
-		actual = [row[-1] for row in fold]
-		# Get the accuracy of what you guessed vs the actual classes
-		accuracy = accuracy_metric(actual, predicted)
-		# Add the score for this fold to the accuracy list
-		scores.append(accuracy)
-	# Return the scores for each fold
-	return scores
 
 
 #
@@ -233,47 +170,6 @@ def forward_propagate(network, row):
 		inputs = new_inputs
 	# Return the new inputs
 	return inputs
- 
-
-#
-# This function will use backpropagate error and store in neurons
-#
-def backward_propagate_error(network, expected):
-	# For each layer in the network
-	for i in reversed(range(len(network))):
-		# Get a reference to the layer
-		layer = network[i]
-		# Create an error list that is empyt
-		errors = list()
-		# If you are not the last layer (i.e output layer)
-		if i != len(network)-1:
-			# For each neuron in the layer
-			for j in range(len(layer)):
-				# Set a error to be 0
-				error = 0.0
-				# For each neuron in the next layer
-				for neuron in network[i + 1]:
-					# Add the calculated error to the running error
-					# weight * delta
-					error += (neuron['weights'][j] * neuron['delta'])
-				# Add the error calculated to the running errors list
-				errors.append(error)
-		# If you are on the last layer of the network
-		else:
-			# For each neuron in the layer
-			for j in range(len(layer)):
-				# Get a reference to the neuron
-				neuron = layer[j]
-				# Add to the running erros list
-				# the expectied value subtracted by the output value
-				errors.append(expected[j] - neuron['output'])
-		# for each neuron in the layer
-		for j in range(len(layer)):
-			# Get a reference to the neuron
-			neuron = layer[j]
-			# Set the delta of the neuron to be the error value of that neuron multiplied
-			# by the derivative of the transfer
-			neuron['delta'] = errors[j] * transfer_derivative(neuron['output'])
 
 
 #
@@ -321,7 +217,7 @@ def train_network(network, train, l_rate, n_epoch, n_outputs):
 			backward_propagate_error(network, expected)
 			# Update the weights based on the row
 			update_weights(network, row, l_rate)
-		# print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, l_rate, sum_error))
+		print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, l_rate, sum_error))
 
 
 #
@@ -332,7 +228,48 @@ def predict(network, row):
 	outputs = forward_propagate(network, row)
 	# Return the largest of the outputs
 	return outputs.index(max(outputs))
+ 
 
+#
+# This function will use backpropagate error and store in neurons
+#
+def backward_propagate_error(network, expected):
+	# For each layer in the network
+	for i in reversed(range(len(network))):
+		# Get a reference to the layer
+		layer = network[i]
+		# Create an error list that is empyt
+		errors = list()
+		# If you are not the last layer (i.e output layer)
+		if i != len(network)-1:
+			# For each neuron in the layer
+			for j in range(len(layer)):
+				# Set a error to be 0
+				error = 0.0
+				# For each neuron in the next layer
+				for neuron in network[i + 1]:
+					# Add the calculated error to the running error
+					# weight * delta
+					error += (neuron['weights'][j] * neuron['delta'])
+				# Add the error calculated to the running errors list
+				errors.append(error)
+		# If you are on the last layer of the network
+		else:
+			# For each neuron in the layer
+			for j in range(len(layer)):
+				# Get a reference to the neuron
+				neuron = layer[j]
+				# Add to the running erros list
+				# the expectied value subtracted by the output value
+				errors.append(expected[j] - neuron['output'])
+		# for each neuron in the layer
+		for j in range(len(layer)):
+			# Get a reference to the neuron
+			neuron = layer[j]
+			# Set the delta of the neuron to be the error value of that neuron multiplied
+			# by the derivative of the transfer
+			neuron['delta'] = errors[j] * transfer_derivative(neuron['output'])
+			
 
 #
 # This is the backpropagation algorithm with stochastic gradient descent
@@ -356,6 +293,70 @@ def back_propagation(train, test, l_rate, n_epoch, n_hidden):
 		predictions.append(prediction)
 	# Return the list of predictions
 	return(predictions)
+ 
+
+#
+# This function will split a dataset into k folds for cross validation
+#
+def cross_validation_split(dataset, n_folds):
+	# Create an empty list that will house the folds
+	dataset_split = list()
+	# Create a copy of the dataset as a list
+	dataset_copy = list(dataset)
+	# Get the number of entries for each fold
+	fold_size = int(len(dataset) / n_folds)
+	# For each fold
+	for i in range(n_folds):
+		# Create an empty list
+		fold = list()
+		# While you still need to populate the fold
+		while len(fold) < fold_size:
+			# Get a random value as an index of the dataset
+			index = randrange(len(dataset_copy))
+			# Add the random row to the fold
+			fold.append(dataset_copy.pop(index))
+		# Add the fold to the dataset that will house the folds
+		dataset_split.append(fold)
+	# Return the dataset list that houses the folds
+	return dataset_split
+ 
+
+#
+# This function will evaluate the algorithm using cross validation
+#
+def evaluate_algorithm(dataset, algorithm, n_folds, *args):
+	# Get all of the folds to use for cross validation
+	folds = cross_validation_split(dataset, n_folds)
+	# Create an empty list to house all of the scores
+	scores = list()
+	# For each fold
+	for fold in folds:
+		# Get a reference to the training set by making a list out of the folds
+		train_set = list(folds)
+		# Remove the fold that you are on
+		train_set.remove(fold)
+		# Make the training sets have a list on them
+		train_set = sum(train_set, [])
+		# Create an empty list 
+		test_set = list()
+		# For each row in the fold
+		for row in fold:
+			# Make a list of the row
+			row_copy = list(row)
+			# Add the row to the test set
+			test_set.append(row_copy)
+			# Set the last column to None
+			row_copy[-1] = None
+		# Use the algorithm that was passed in on the training set and the test set
+		predicted = algorithm(train_set, test_set, *args)
+		# Get a list of the actual classes for each row in the fold
+		actual = [row[-1] for row in fold]
+		# Get the accuracy of what you guessed vs the actual classes
+		accuracy = accuracy_metric(actual, predicted)
+		# Add the score for this fold to the accuracy list
+		scores.append(accuracy)
+	# Return the scores for each fold
+	return scores
 
 
 #
