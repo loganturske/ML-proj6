@@ -217,7 +217,7 @@ def train_network(network, train, l_rate, n_epoch, n_outputs):
 			backward_propagate_error(network, expected)
 			# Update the weights based on the row
 			update_weights(network, row, l_rate)
-		print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, l_rate, sum_error))
+		# print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, l_rate, sum_error))
 
 
 #
@@ -381,8 +381,16 @@ if __name__ == "__main__":
 	n_folds = 5
 	l_rate = 0.3
 	n_epoch = 500
-	n_hidden = 5
-	# Run the algo
+	n_hidden = 10
+
+	for cnt in xrange(0,3):
+		# Run the algo
+		scores = evaluate_algorithm(dataset, back_propagation, n_folds, l_rate, n_epoch, cnt)
+		# print('Scores: %s' % scores)
+		print "Layers: " + str(cnt)
+		print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
+
 	scores = evaluate_algorithm(dataset, back_propagation, n_folds, l_rate, n_epoch, n_hidden)
-	print('Scores: %s' % scores)
+	# print('Scores: %s' % scores)
+	print "Layers: " + str(n_hidden)
 	print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
